@@ -106,7 +106,7 @@ STK500-2 = $(STK500) -d$(MCU_TARGET) -ms -q -lCF -LCF -cUSB -I200kHz -s -wt
 
 
 OBJ        = $(PROGRAM).o
-OPTIMIZE = -Os -fno-inline-small-functions -fno-split-wide-types -mshort-calls
+OPTIMIZE = -Os -fno-inline-small-functions -fno-split-wide-types -mshort-calls -mrelax
 
 DEFS       = 
 LIBS       =
@@ -169,8 +169,13 @@ ifdef SINGLESPEED
 SSCMD = -DSINGLESPEED=1
 endif
 
-COMMON_OPTIONS = $(BAUD_RATE_CMD) $(LED_START_FLASHES_CMD) $(BIGBOOT_CMD)
+ifdef USE_I2C_EEPROM
+USE_I2C_EEPROM_CMD = -DUSE_I2C_EEPROM
+endif
+
+COMMON_OPTIONS = $(BAUD_RATE_CMD) $(LED_START_FLASHES_CMD) $(BIGBOOT_CMD) 
 COMMON_OPTIONS += $(SOFT_UART_CMD) $(LED_DATA_FLASH_CMD) $(LED_CMD) $(SSCMD)
+COMMON_OPTIONS += $(USE_I2C_EEPROM_CMD)
 
 #UART is handled separately and only passed for devices with more than one.
 ifdef UART
@@ -246,7 +251,7 @@ atmega328: TARGET = atmega328
 atmega328: MCU_TARGET = atmega328p
 atmega328: CFLAGS += $(COMMON_OPTIONS)
 atmega328: AVR_FREQ ?= 16000000L
-atmega328: LDSECTIONS  = -Wl,--section-start=.text=0x7c00 -Wl,--section-start=.version=0x7ffe
+atmega328: LDSECTIONS  = -lm -Wl,--section-start=.text=0x7c00 -Wl,--section-start=.version=0x7ffe
 atmega328: $(PROGRAM)_atmega328.hex
 atmega328: $(PROGRAM)_atmega328.lst
 
@@ -261,10 +266,16 @@ atmega328_isp: LFUSE ?= FF
 atmega328_isp: EFUSE ?= FD
 atmega328_isp: isp
 
-atmega328_i2c: atmega328
+atmega328_i2c: atmega328_i2c
 atmega328_i2c: TARGET = atmega328_i2c
 atmega328_i2c: MCU_TARGET = atmega328p
-atmega328_i2c: CFLAGS += $(COMMON_OPTIONS) -DUSE_I2C_EEPROM $(LED_CMD) 
+# 2048 byte boot, SPIEN
+atmega328_i2c: HFUSE ?= D8
+atmega328_i2c: CFLAGS += $(COMMON_OPTIONS) -lm -Wl,-gc-sections -DUSE_I2C_EEPROM $(LED_CMD) 
+atmega328_i2c: AVR_FREQ ?= 16000000L
+atmega328_i2c: LDSECTIONS  = -lm -Wl,--section-start=.text=0x7800 -Wl,--section-start=.version=0x7ffe
+atmega328_i2c: Dual$(PROGRAM)_atmega328_i2c.hex
+atmega328_i2c: Dual$(PROGRAM)_atmega328_i2c.lst
 
 atmega644p: TARGET = atmega644p
 atmega644p: MCU_TARGET = atmega644p
