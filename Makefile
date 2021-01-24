@@ -33,7 +33,7 @@
 #----------------------------------------------------------------------
 #
 # program name should not be changed... ( it looks for optiboot.c !!!)
-PROGRAM    = optiboot
+PROGRAM    = Optiboot
 
 # The default behavior is to build using tools that are in the users
 # current path variables, but we can also build using an installed
@@ -85,10 +85,13 @@ endif
 ifeq ($(OS), windows)
 TOOLROOT = ../../../../build/windows/work/hardware/tools
 endif
-
-GCCROOT = $(TOOLROOT)/avr/bin/
 AVRDUDE_CONF = -C$(TOOLROOT)/avr/etc/avrdude.conf
+GCCROOT = $(TOOLROOT)/avr/bin/
 
+else ifneq (,$(shell which pio))
+# PlatformIO environment
+GCCROOT = ~/.platformio/packages/toolchain-atmelavr/bin/
+AVRDUDE_CONF = ~/.platformio/packages/tool-avrdude/avrdude.conf
 else
 GCCROOT =
 AVRDUDE_CONF =
@@ -257,6 +260,11 @@ atmega328_isp: LFUSE ?= FF
 # 2.7V brownout
 atmega328_isp: EFUSE ?= FD
 atmega328_isp: isp
+
+atmega328_i2c: atmega328
+atmega328_i2c: TARGET = atmega328_i2c
+atmega328_i2c: MCU_TARGET = atmega328p
+atmega328_i2c: CFLAGS += $(COMMON_OPTIONS) -DUSE_I2C_EEPROM $(LED_CMD) 
 
 atmega644p: TARGET = atmega644p
 atmega644p: MCU_TARGET = atmega644p
